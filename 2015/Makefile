@@ -5,8 +5,13 @@ INPUT ?= input
 OUTPUT ?= output
 
 # C-Related Options
+CC ?= clang
 CSTD_DIR = $(SRC)/cstd
 CSTD_FILES = $(CSTD_DIR)/algorithms.c
+
+all: c
+
+c: day1 day2
 
 day1:
 	LANG=$(LANG) DAY=1 make test
@@ -19,7 +24,7 @@ $(DEST):
 
 build: $(DEST)
 ifeq ($(LANG), C99)
-	CC -std=c99 -Wall $(CSTD_FILES) -o $(DEST)/day$(DAY) $(SRC)/day$(DAY).c
+	$(CC) -std=c99 -Wall $(CSTD_FILES) -o $(DEST)/day$(DAY) $(SRC)/day$(DAY).c
 endif
 
 test: build
