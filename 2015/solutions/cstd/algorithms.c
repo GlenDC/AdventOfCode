@@ -8,8 +8,8 @@ void heaps(int* array, size_t len) {
 
     for(u = i+1 ; u < len; ++u) {
       if(array[u] < smallest) {
-	smallest = array[u];
-	pos = u;
+        smallest = array[u];
+        pos = u;
       }
     }
 

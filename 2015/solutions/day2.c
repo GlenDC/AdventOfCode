@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
-
-#include "std/std.h"
+#include "cstd/std.h"
 
 #define SIZE_LEN 3
 
@@ -45,27 +44,17 @@ int calc_ribbon(char const* sum) {
 }
 
 int main(void) {
-  FILE* input = fopen("../input/day2.txt", "r");
-
-  if(!input) {
-    printf("Couldn't open file!\n");
-    return 1;
-  }
-
-  buffer_t* buffer = new_buffer(8);
 
   int wrapping, ribbon;
   wrapping = ribbon = 0;
-  while(bgetline(input, &buffer)) {
-    wrapping += calc_surface(buffer->data);
-    ribbon += calc_ribbon(buffer->data);
+
+  char *line = NULL;
+  size_t size;
+  while(getline(&line, &size, stdin) != -1 && size > SIZE_LEN) {
+    wrapping += calc_surface(line);
+    ribbon += calc_ribbon(line);
   }
 
-  give_answer(wrapping, 1, "../solutions/day2.txt");
-  give_answer(ribbon, 2, "../solutions/day2.txt");
-  
-  fclose(input);
-  free_buffer(buffer);
-
+  printf("%d\n%d\n", wrapping, ribbon);
   return 0;
 }
