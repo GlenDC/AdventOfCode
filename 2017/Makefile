@@ -4,12 +4,14 @@ SRC ?= solutions
 INPUT ?= input
 OUTPUT ?= output
 
-all: rust
-
-rust: day1
+all: day1
 
 day1:
-	LANG=$(LANG) DAY=1 make test
+	DAY=1 make day
+
+day:
+	DAY=$(DAY)a make test
+	DAY=$(DAY)b make test
 
 $(DEST):
 	mkdir -p $(DEST)
@@ -17,6 +19,9 @@ $(DEST):
 build: $(DEST)
 ifeq ($(LANG), Rust)
 	rustc $(SRC)/day$(DAY).rs -o $(DEST)/day$(DAY) -O
+else
+	@echo "Invalid Language: $(LANG)"
+	exit 1
 endif
 
 test: build
