@@ -2,5 +2,7 @@ matrix:
   include:
     - language: c
       compiler: clang
-      script:
-        - cd 2015 && CC=clang LANG=C99 make c
+      script: cd 2015 && CC=clang LANG=C99 make c
+    - language: rust
+      rust: stable
+      script: cd 2017 && LANG=Rust make all
