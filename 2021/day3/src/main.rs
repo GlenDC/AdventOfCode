@@ -4,10 +4,106 @@ fn main() {
 }
 
 fn part1() {
+    let mut v = vec![0; LINE_LENGTH];
+    let mut line_count = 0;
+    for line in INPUT.split("\n") {
+        for (idx, c) in line.bytes().enumerate() {
+            v[idx] += match c {
+                48 => 0,
+                49 => 1,
+                _ => panic!("unexpected byte: {}", c),
+            };
+        }
+        line_count += 1;
+    }
+    let mut gamme_rate_bits = Vec::with_capacity(LINE_LENGTH);
+    for n in v {
+        gamme_rate_bits.push(if n >= line_count / 2 { 1 } else { 0 });
+    }
+    let gamma_rate = u64::from_str_radix(
+        &gamme_rate_bits
+            .iter()
+            .map(|n| n.to_string())
+            .fold(String::new(), |acc, n| acc + &n.to_string()),
+        2,
+    )
+    .unwrap();
+    let epsilon_rate = u64::from_str_radix(
+        &gamme_rate_bits
+            .iter()
+            .map(|n: &u64| ((*n == 0) as u64).to_string())
+            .fold(String::new(), |acc, n| acc + &n.to_string()),
+        2,
+    )
+    .unwrap();
+    let power_consumption = gamma_rate * epsilon_rate;
+    println!("{}", power_consumption);
 }
 
 fn part2() {
+    let mut v = vec![0; LINE_LENGTH];
+    let mut line_count = 0;
+    for line in INPUT.split("\n") {
+        for (idx, c) in line.bytes().enumerate() {
+            v[idx] += match c {
+                48 => 0,
+                49 => 1,
+                _ => panic!("unexpected byte: {}", c),
+            };
+        }
+        line_count += 1;
+    }
+
+    let oxygen_generator_rating = get_rate_bit_str(&v, |n| n >= line_count / 2);
+    let co2_scrubber_rating = get_rate_bit_str(&v, |n| n < line_count / 2);
+
+    let mut oxygen_generator_rating_match_length = 0;
+    let mut oxygen_generator_rating_bit_str: &str = "";
+    let mut co2_scrubbing_match_length = 0;
+    let mut co2_scrubbing_bit_str: &str = "";
+
+    for line in INPUT.split("\n") {
+        let n = get_rate_prefix_match_length(line, &oxygen_generator_rating);
+        if n > oxygen_generator_rating_match_length {
+            oxygen_generator_rating_match_length = n;
+            oxygen_generator_rating_bit_str = line;
+        }
+        let n = get_rate_prefix_match_length(line, &co2_scrubber_rating);
+        if n > co2_scrubbing_match_length {
+            co2_scrubbing_match_length = n;
+            co2_scrubbing_bit_str = line;
+        }
+    }
+
+    let oxygen_generator_rating = u64::from_str_radix(oxygen_generator_rating_bit_str, 2).unwrap();
+    let co2_scrubbing_rating = u64::from_str_radix(co2_scrubbing_bit_str, 2).unwrap();
+    let life_support_rating = oxygen_generator_rating * co2_scrubbing_rating;
+    println!("{}", life_support_rating);
 }
+
+fn get_rate_bit_str<P: Fn(u64) -> bool>(v: &Vec<u64>, m: P) -> String {
+    let mut bits = Vec::with_capacity(LINE_LENGTH);
+    for n in v {
+        bits.push(m(*n) as u64);
+    }
+    bits.iter()
+        .map(|n| n.to_string())
+        .fold(String::new(), |acc, n| acc + &n.to_string())
+}
+
+fn get_rate_prefix_match_length(number_bits: &str, rate_bits: &str) -> usize {
+    let mut length = 0;
+    let rate_bytes = rate_bits.as_bytes();
+    for (idx, number_c) in number_bits.bytes().enumerate() {
+        if number_c != rate_bytes[idx] {
+            break;
+        }
+        length += 1;
+    }
+    length
+}
+
+const LINE_LENGTH: usize = 12;
 
 const INPUT: &'static str = "100000101101
 011011010101
