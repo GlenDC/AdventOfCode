@@ -41,69 +41,42 @@ fn part1() {
 }
 
 fn part2() {
-    let mut v = vec![0; LINE_LENGTH];
-    let mut line_count = 0;
-    for line in INPUT.split("\n") {
-        for (idx, c) in line.bytes().enumerate() {
-            v[idx] += match c {
-                48 => 0,
-                49 => 1,
-                _ => panic!("unexpected byte: {}", c),
-            };
-        }
-        line_count += 1;
-    }
-
-    let oxygen_generator_rating = get_rate_bit_str(&v, |n| n >= line_count / 2);
-    let co2_scrubber_rating = get_rate_bit_str(&v, |n| n < line_count / 2);
-
-    let mut oxygen_generator_rating_match_length = 0;
-    let mut oxygen_generator_rating_bit_str: &str = "";
-    let mut co2_scrubbing_match_length = 0;
-    let mut co2_scrubbing_bit_str: &str = "";
-
-    for line in INPUT.split("\n") {
-        let n = get_rate_prefix_match_length(line, &oxygen_generator_rating);
-        if n > oxygen_generator_rating_match_length {
-            oxygen_generator_rating_match_length = n;
-            oxygen_generator_rating_bit_str = line;
-        }
-        let n = get_rate_prefix_match_length(line, &co2_scrubber_rating);
-        if n > co2_scrubbing_match_length {
-            co2_scrubbing_match_length = n;
-            co2_scrubbing_bit_str = line;
-        }
-    }
-
-    let oxygen_generator_rating = u64::from_str_radix(oxygen_generator_rating_bit_str, 2).unwrap();
-    let co2_scrubbing_rating = u64::from_str_radix(co2_scrubbing_bit_str, 2).unwrap();
-    let life_support_rating = oxygen_generator_rating * co2_scrubbing_rating;
+    let oxygen_generator_rating = get_rate(|total, line_count| total >= (line_count+1) / 2);
+    let co2_scrubber_rating = get_rate(|total, line_count| total < (line_count+1) / 2);
+    let life_support_rating = oxygen_generator_rating * co2_scrubber_rating;
     println!("{}", life_support_rating);
 }
 
-fn get_rate_bit_str<P: Fn(u64) -> bool>(v: &Vec<u64>, m: P) -> String {
-    let mut bits = Vec::with_capacity(LINE_LENGTH);
-    for n in v {
-        bits.push(m(*n) as u64);
-    }
-    bits.iter()
-        .map(|n| n.to_string())
-        .fold(String::new(), |acc, n| acc + &n.to_string())
-}
-
-fn get_rate_prefix_match_length(number_bits: &str, rate_bits: &str) -> usize {
-    let mut length = 0;
-    let rate_bytes = rate_bits.as_bytes();
-    for (idx, number_c) in number_bits.bytes().enumerate() {
-        if number_c != rate_bytes[idx] {
+fn get_rate<F: Fn(usize, usize) -> bool>(t: F) -> u64 {
+    let mut numbers: Vec<&str> = INPUT.split("\n").collect();
+    for index in 0..LINE_LENGTH {
+        let mut n: usize = 0;
+        for number in &numbers {
+            n += (number.as_bytes()[index] - 48) as usize;
+        }
+        let b = t(n, numbers.len()) as u8 + 48;
+        numbers.retain(|number| number.as_bytes()[index] == b);
+        if numbers.len() == 1 {
             break;
         }
-        length += 1;
     }
-    length
+    u64::from_str_radix(numbers[0], 2).unwrap()
 }
 
 const LINE_LENGTH: usize = 12;
+
+// const TEST_INPUT: &'static str = "00100
+// 11110
+// 10110
+// 10111
+// 10101
+// 01111
+// 00111
+// 11100
+// 10000
+// 11001
+// 00010
+// 01010";
 
 const INPUT: &'static str = "100000101101
 011011010101
