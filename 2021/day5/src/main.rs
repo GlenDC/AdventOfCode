@@ -3,9 +3,126 @@ fn main() {
     part2();
 }
 
-fn part1() {}
+fn part1() {
+    // const GRID_SIZE: usize = 10;
+    const GRID_SIZE: usize = 999;
+    const GRID_CELL_COUNT: usize = GRID_SIZE * GRID_SIZE;
 
-fn part2() {}
+    let mut grid: [usize; GRID_CELL_COUNT] = [0; GRID_CELL_COUNT];
+
+    // for line in TEST_INPUT.split("\n") {
+    for line in INPUT.split("\n") {
+        let points: Vec<(usize, usize)> = line
+            .split(" -> ")
+            .map(|s| {
+                let mut it = s.split(",");
+                let x: usize = it.next().unwrap().parse().unwrap();
+                let y: usize = it.next().unwrap().parse().unwrap();
+                (x, y)
+            })
+            .collect();
+        if points[0].0 == points[1].0 {
+            // vertical lines
+            let x = points[0].0;
+            let order = points[0].1 >= points[1].1;
+            let y1 = points[order as usize].1;
+            let y2 = points[(!order) as usize].1;
+            for y in y1..(y2 + 1) {
+                grid[y * GRID_SIZE + x] += 1;
+            }
+        } else if points[0].1 == points[1].1 {
+            // horizontal lines
+            let y = points[0].1;
+            let order = points[0].0 >= points[1].0;
+            let x1 = points[order as usize].0;
+            let x2 = points[(!order) as usize].0;
+            for x in x1..(x2 + 1) {
+                grid[y * GRID_SIZE + x] += 1;
+            }
+        }
+    }
+
+    // for y in 0..GRID_SIZE {
+    //     for x in 0..GRID_SIZE {
+    //         let n = grid[y * GRID_SIZE + x];
+    //         if n == 0 {
+    //             print!(".");
+    //         } else {
+    //             print!("{}", n);
+    //         }
+    //     }
+    //     print!("\n");
+    // }
+
+    let danger_count = grid.iter().fold(0, |sum, x| sum + (*x >= 2) as usize);
+    println!("{}", danger_count);
+}
+
+fn part2() {
+    // const GRID_SIZE: usize = 10;
+    const GRID_SIZE: usize = 999;
+    const GRID_CELL_COUNT: usize = GRID_SIZE * GRID_SIZE;
+
+    let mut grid: [usize; GRID_CELL_COUNT] = [0; GRID_CELL_COUNT];
+
+    // for line in TEST_INPUT.split("\n") {
+    for line in INPUT.split("\n") {
+        let points: Vec<(usize, usize)> = line
+            .split(" -> ")
+            .map(|s| {
+                let mut it = s.split(",");
+                let x: usize = it.next().unwrap().parse().unwrap();
+                let y: usize = it.next().unwrap().parse().unwrap();
+                (x, y)
+            })
+            .collect();
+        if points[0].0 == points[1].0 {
+            // vertical lines
+            let x = points[0].0;
+            let order = points[0].1 >= points[1].1;
+            let y1 = points[order as usize].1;
+            let y2 = points[(!order) as usize].1;
+            for y in y1..(y2 + 1) {
+                grid[y * GRID_SIZE + x] += 1;
+            }
+        } else if points[0].1 == points[1].1 {
+            // horizontal lines
+            let y = points[0].1;
+            let order = points[0].0 >= points[1].0;
+            let x1 = points[order as usize].0;
+            let x2 = points[(!order) as usize].0;
+            for x in x1..(x2 + 1) {
+                grid[y * GRID_SIZE + x] += 1;
+            }
+        } else {
+            // diagonal lines, 45 degrees only
+            let size = ((points[0].0 as isize) - (points[1].0 as isize)).abs() as isize;
+            let offset_x: isize = if points[0].0 < points[1].0 { 1 } else { -1 };
+            let offset_y: isize = if points[0].1 < points[1].1 { 1 } else { -1 };
+            // println!("{:?} ; {} ; {} ; {}", points, size, offset_x, offset_y);
+            for offset in 0..(size+1) {
+                let x = ((points[0].0 as isize) + offset_x*offset) as usize;
+                let y = ((points[0].1 as isize) + offset_y*offset) as usize;
+                grid[y * GRID_SIZE + x] += 1;
+            }
+        }
+    }
+
+    // for y in 0..GRID_SIZE {
+    //     for x in 0..GRID_SIZE {
+    //         let n = grid[y * GRID_SIZE + x];
+    //         if n == 0 {
+    //             print!(".");
+    //         } else {
+    //             print!("{}", n);
+    //         }
+    //     }
+    //     print!("\n");
+    // }
+
+    let danger_count = grid.iter().fold(0, |sum, x| sum + (*x >= 2) as usize);
+    println!("{}", danger_count);
+}
 
 // const TEST_INPUT: &'static str = "0,9 -> 5,9
 // 8,0 -> 0,8
