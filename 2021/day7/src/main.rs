@@ -15,9 +15,9 @@ fn main() {
 
     part2(TEST_INPUT);
 
-    // println!("-----");
+    println!("-----");
 
-    // part2(INPUT);
+    part2(INPUT);
 }
 
 fn part1(input: &str) {
@@ -44,21 +44,25 @@ fn part1(input: &str) {
 fn part2(input: &str) {
     let mut positions: Vec<i64> = input.split(",").map(|s| s.parse().unwrap()).collect();
     positions.sort();
-    let start = positions.len() / 5 * 2;
-    let stop = positions.len() / 5 * 3;
+    let start = positions[0];
+    let stop = positions[positions.len() - 1];
     let mut min_fuel_cost = positions
         .iter()
-        .fold(0, |sum, pos| sum + calc_fuel_cost(positions[start], *pos));
-    let mut target_pos = positions[start];
-    for index in (start + 1)..(stop + 1) {
+        .fold(0, |sum, pos| sum + calc_fuel_cost(start, *pos));
+    let mut target_pos = start;
+    for candidate_pos in (start + 1)..(stop + 1) {
         let fuel_cost = positions
             .iter()
-            .fold(0, |sum, pos| sum + calc_fuel_cost(positions[index], *pos));
+            .fold(0, |sum, pos| sum + calc_fuel_cost(candidate_pos, *pos));
         if fuel_cost < min_fuel_cost {
             min_fuel_cost = fuel_cost;
-            target_pos = positions[index];
+            target_pos = candidate_pos;
         }
     }
+    // for pos in positions {
+    //     let cost = calc_fuel_cost(pos, target_pos);
+    //     println!("Move from {} to {}: {} fuel", target_pos, 5, cost);
+    // }
     println!("{} (target: {})", min_fuel_cost, target_pos);
 }
 
@@ -67,7 +71,7 @@ fn calc_fuel_cost(start_pos: i64, stop_pos: i64) -> i64 {
     if n == 0 {
         return 0;
     }
-    n * (n - 1) / 2
+    n * (n + 1) / 2
 }
 
 const TEST_INPUT: &'static str = "16,1,2,0,4,2,7,1,2,14";
