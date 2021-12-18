@@ -11,7 +11,7 @@ fn main() {
 
     println!("-----");
 
-    part1(INPUT);
+    // part1(INPUT);
 
     // println!("++++++++++++");
     // println!("PART#2");
@@ -205,16 +205,15 @@ impl WalkerBestFirst {
 
         let mut previous_cell_mapping: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
 
-        let mut candidates = Vec::new();
-        candidates.push((0, 0));
+        let mut candidates = vec![(0, 0)];
 
         while !candidates.is_empty() {
             // take candidate with lowest estimate score
             let (current_idx, _best_score): (usize, u64) = candidates[1..].iter().enumerate().fold(
-                (0, cached_scores[&candidates[0]]),
+                (0, guess_scores[&candidates[0]]),
                 |(best_idx, best_score), (cur_idx, cur_point)| {
                     let score = guess_scores[&cur_point];
-                    if score < best_score {
+                    if score <= best_score {
                         (cur_idx, score)
                     } else {
                         (best_idx, best_score)
@@ -231,7 +230,12 @@ impl WalkerBestFirst {
                 loop {
                     match previous_cell_mapping.get(&current) {
                         None => {
+                            self.print_score_cache(&best_path[..], &cached_scores);
+                            println!("---");
+                            self.print_score_cache(&best_path[..], &guess_scores);
+                            println!("---");
                             self.print_path(&best_path[..]);
+                            println!("---");
                             return best_path.iter().map(|(x, y)| self.grid[*y][*x]).sum();
                         }
                         Some(previous) => {
@@ -255,20 +259,21 @@ impl WalkerBestFirst {
 
                 let (x, y) = (x as usize, y as usize);
                 let neighbour_score = cached_scores[&current] + self.grid[y][x];
-                match cached_scores.get(&(x, y)) {
+                let neighbour = (x, y);
+                match cached_scores.get(&neighbour) {
                     None => (),
                     Some(previous_score) => {
-                        if *previous_score < neighbour_score {
-                            // skip as new score is higher or equal to the one we already known one
+                        if *previous_score <= neighbour_score {
+                            // skip as new score is higher than the one we already known one
                             continue;
                         }
                     }
                 };
-                previous_cell_mapping.insert((x, y), current);
-                cached_scores.insert((x, y), neighbour_score);
-                guess_scores.insert((x, y), neighbour_score + self.ideal_remain_score(x, y));
-                if !candidates.iter().any(|candidate| *candidate == (x, y)) {
-                    candidates.push((x, y));
+                previous_cell_mapping.insert(neighbour, current);
+                cached_scores.insert(neighbour, neighbour_score);
+                guess_scores.insert(neighbour, neighbour_score + self.ideal_remain_score(neighbour.0, neighbour.1));
+                if !candidates.iter().any(|candidate| *candidate == neighbour) {
+                    candidates.push(neighbour);
                 }
             }
         }
@@ -297,6 +302,25 @@ impl WalkerBestFirst {
                     green!("{}", value)
                 } else {
                     red!("{}", value)
+                }
+            }
+            println!("");
+        }
+        println!("");
+        println!("");
+    }
+
+    fn print_score_cache(&self, best_path: &[(usize, usize)], scores: &HashMap<(usize, usize), u64>) {
+        for (y, row) in self.grid.iter().enumerate() {
+            for (x, value) in row.iter().enumerate() {
+                if let Some(score) = scores.get(&(x, y)) {
+                    if best_path.iter().any(|(cx, cy)| *cx == x && *cy == y) {
+                        green!("{}", format!("{: <8}", score));
+                    } else {
+                        red!("{}", format!("{: <8}", score));
+                    }
+                } else {
+                    print!("{}", format!("{: <8}", "?"));
                 }
             }
             println!("");
