@@ -54,7 +54,6 @@ enum PacketData {
 
 struct OperatorData {
     pub packet_id: u32,
-    pub length_type_id: LenghtTypeID,
     pub sub_packets: Vec<Packet>,
 }
 
@@ -373,7 +372,6 @@ impl<'a> Decoder<'a> {
                 version: op_data.version,
                 data: PacketData::Operator(OperatorData {
                     packet_id: op_data.packet_id,
-                    length_type_id: op_data.length_type_id,
                     sub_packets: op_data.sub_packets,
                 }),
             }));
@@ -599,7 +597,6 @@ mod tests {
             PacketData::Literal(_) => panic!("unexpected data"),
             PacketData::Operator(op_data) => {
                 assert_eq!(op_data.packet_id, 6);
-                assert_eq!(op_data.length_type_id, LenghtTypeID::Zero);
                 assert_eq!(op_data.sub_packets.len(), 2);
                 match op_data.sub_packets[0].data {
                     PacketData::Literal(x) => assert_eq!(x, 10),
@@ -622,7 +619,6 @@ mod tests {
             PacketData::Literal(_) => panic!("unexpected data"),
             PacketData::Operator(op_data) => {
                 assert_eq!(op_data.packet_id, 3);
-                assert_eq!(op_data.length_type_id, LenghtTypeID::One);
                 assert_eq!(op_data.sub_packets.len(), 3);
                 match op_data.sub_packets[0].data {
                     PacketData::Literal(x) => assert_eq!(x, 1),
