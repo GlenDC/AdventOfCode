@@ -26,7 +26,7 @@ fn main() {
 }
 
 fn part1(input: &str) {
-    let mut decoder: Decoder = input.into();
+    let decoder: Decoder = input.into();
     let packet = decoder.read_packet().unwrap();
     let version_sum: u32 = packet.iter().map(|packet| packet.version).sum();
     println!("{}", version_sum);
@@ -50,6 +50,7 @@ struct OperatorData {
     pub sub_packets: Vec<Packet>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum LenghtTypeID {
     Zero,
     One,
@@ -100,7 +101,7 @@ struct Decoder<'a> {
 }
 
 impl<'a> Decoder<'a> {
-    pub fn read_packet(&mut self) -> Result<Packet> {
+    pub fn read_packet(mut self) -> Result<Packet> {
         let version = self.read_u32(3)?;
         let packet_id = self.read_u32(3)?;
 
@@ -137,38 +138,40 @@ impl<'a> Decoder<'a> {
                     }
                 },
             };
-            if let Some(packet) = packet {
-                match stack.pop() {
-                    // finished
-                    None => {
-                        if !self.it.next().is_none() {
-                            return Err(anyhow!(
-                                "cannot return packet: decoder's iterator is not yet exhausted"
-                            ));
-                        }
-                        return Ok(packet);
+            let packet = match packet {
+                None => continue,
+                Some(packet) => packet,
+            };
+            match stack.pop() {
+                // finished
+                None => {
+                    if !self.it.next().is_none() {
+                        return Err(anyhow!(
+                            "cannot return packet: decoder's iterator is not yet exhausted"
+                        ));
                     }
-                    Some(DecoderState::Operator(op_data)) => {
-                        let pos = self.it.position();
-                        let n = match op_data.length_type_id {
-                            // 'n' represents the total size of sub packets contained within
-                            LenghtTypeID::Zero => op_data.n - (pos - op_data.last_pos) as u32,
-                            // 'n' represent the number of sub-packets immediately contained by this packet
-                            LenghtTypeID::One => op_data.n - 1,
-                        };
-                        let mut sub_packets = op_data.sub_packets;
-                        sub_packets.push(packet);
-                        stack.push(DecoderState::Operator(OperatorDecodeStateData {
-                            version: op_data.version,
-                            packet_id: op_data.packet_id,
-                            length_type_id: op_data.length_type_id,
-                            sub_packets: sub_packets,
-                            n,
-                            last_pos: pos,
-                        }));
-                    }
-                    _ => return Err(anyhow!("unexpected stack state")),
+                    return Ok(packet);
                 }
+                Some(DecoderState::Operator(op_data)) => {
+                    let pos = self.it.position();
+                    let n = op_data.n - match op_data.length_type_id {
+                        // 'n' represents the total size of sub packets contained within
+                        LenghtTypeID::Zero => (pos - op_data.last_pos) as u32,
+                        // 'n' represent the number of sub-packets immediately contained by this packet
+                        LenghtTypeID::One => 1,
+                    };
+                    let mut sub_packets = op_data.sub_packets;
+                    sub_packets.push(packet);
+                    stack.push(DecoderState::Operator(OperatorDecodeStateData {
+                        version: op_data.version,
+                        packet_id: op_data.packet_id,
+                        length_type_id: op_data.length_type_id,
+                        sub_packets: sub_packets,
+                        n,
+                        last_pos: pos,
+                    }));
+                }
+                _ => return Err(anyhow!("unexpected stack state")),
             }
         }
     }
@@ -188,6 +191,9 @@ impl<'a> Decoder<'a> {
                 }),
             }));
         }
+
+        // push op_data back to stack... not yet finished
+        stack.push(DecoderState::Operator(op_data));
 
         let version = self.read_u32(3)?;
         let packet_id = self.read_u32(3)?;
@@ -217,6 +223,7 @@ impl<'a> Decoder<'a> {
     fn read_literal(&mut self, version: u32) -> Result<Packet> {
         let mut bits_buffer = Vec::new();
         let mut read_more = true;
+        let mut groups_read_counter = 0;
         while read_more {
             read_more = match self.it.next() {
                 None => return Err(anyhow!("unexpected EOF")),
@@ -225,20 +232,18 @@ impl<'a> Decoder<'a> {
             for _ in 0..4 {
                 bits_buffer.push(self.it.next().ok_or(anyhow!("unexpected EOF"))?);
             }
+            groups_read_counter += 1;
         }
-        let mut bits_buffer_slice = &bits_buffer[..];
-        let mut bits_buffer_len = bits_buffer.len();
-        for i in 0..bits_buffer.len() {
-            // remove trailing 0's
-            let idx = bits_buffer_slice.len() - i - 1;
-            if bits_buffer_slice[idx] == 1 {
-                break;
-            }
-            bits_buffer_len -= 1;
+        for _ in 0..((groups_read_counter*5)%4) {
+            match self.it.next() {
+                None => return Err(anyhow!("unexpected EOF")),
+                Some(0) => (),
+                _ => return Err(anyhow!("unexpected padding bit found at end of literal")),
+            };
         }
         let mut x: u32 = 0;
-        for (idx, bit) in (&bits_buffer[..bits_buffer_len]).iter().enumerate() {
-            x |= (*bit as u32) << (bits_buffer_len - idx - 1)
+        for (idx, bit) in bits_buffer.iter().enumerate() {
+            x |= (*bit as u32) << (bits_buffer.len() - idx - 1)
         }
         Ok(Packet {
             version,
@@ -248,9 +253,9 @@ impl<'a> Decoder<'a> {
 
     fn read_u32(&mut self, bits: usize) -> Result<u32> {
         let mut x: u32 = 0;
-        for i in 1..=bits {
+        for i in 0..bits {
             let bit = self.it.next().ok_or(anyhow!("unexpected EOF"))? as u32;
-            x |= bit << bits - i
+            x |= bit << bits - i - 1;
         }
         Ok(x)
     }
@@ -389,5 +394,66 @@ mod tests {
             let s = String::from_utf8(it.map(|b| b+48).collect()).unwrap();
             assert_eq!(s, test_case.1);
         }
+    }
+
+    #[test]
+    fn test_decode_literal_packet() {
+        let decoder: Decoder = "D2FE28".into();
+        let packet = decoder.read_packet().unwrap();
+        assert_eq!(packet.version, 6);
+        match packet.data {
+            PacketData::Literal(x) => assert_eq!(x, 2021),
+            _ => panic!("unexpected data"),
+        };
+    }
+
+    #[test]
+    fn test_decode_operator_packet_length_v0() {
+        let decoder: Decoder = "38006F45291200".into();
+        let packet = decoder.read_packet().unwrap();
+        assert_eq!(packet.version, 1);
+        match packet.data {
+            PacketData::Literal(_) => panic!("unexpected data"),
+            PacketData::Operator(op_data) => {
+                assert_eq!(op_data.packet_id, 6);
+                assert_eq!(op_data.length_type_id, LenghtTypeID::Zero);
+                assert_eq!(op_data.sub_packets.len(), 2);
+                match op_data.sub_packets[0].data {
+                    PacketData::Literal(x) => assert_eq!(x, 10),
+                    _ => panic!("unexpected sub packet #1 data"),
+                };
+                match op_data.sub_packets[1].data {
+                    PacketData::Literal(x) => assert_eq!(x, 20),
+                    _ => panic!("unexpected sub packet #2 data"),
+                };
+            }
+        };
+    }
+
+    #[test]
+    fn test_decode_operator_packet_length_v1() {
+        let decoder: Decoder = "EE00D40C823060".into();
+        let packet = decoder.read_packet().unwrap();
+        assert_eq!(packet.version, 7);
+        match packet.data {
+            PacketData::Literal(_) => panic!("unexpected data"),
+            PacketData::Operator(op_data) => {
+                assert_eq!(op_data.packet_id, 3);
+                assert_eq!(op_data.length_type_id, LenghtTypeID::One);
+                assert_eq!(op_data.sub_packets.len(), 3);
+                match op_data.sub_packets[0].data {
+                    PacketData::Literal(x) => assert_eq!(x, 1),
+                    _ => panic!("unexpected sub packet #1 data"),
+                };
+                match op_data.sub_packets[1].data {
+                    PacketData::Literal(x) => assert_eq!(x, 2),
+                    _ => panic!("unexpected sub packet #2 data"),
+                };
+                match op_data.sub_packets[2].data {
+                    PacketData::Literal(x) => assert_eq!(x, 3),
+                    _ => panic!("unexpected sub packet #3 data"),
+                };
+            }
+        };
     }
 }
